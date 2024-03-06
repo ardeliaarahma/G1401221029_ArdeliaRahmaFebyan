@@ -1,0 +1,119 @@
+---
+title: "Tugas Individu Analisis Regresi"
+author: "Ardelia Rahma Febyan_G1401221029"
+date: "2024-03-06"
+output: html_document
+---
+## Inisialisasi Library
+```{r}
+library (readxl)
+library (tidyverse)
+library (ggridges)
+library (GGally)
+library (plotly)
+library (dplyr)
+library (lmtest)
+library (stats)
+```
+
+## Input Data
+```{r}
+dt<-read_xlsx("C:/Users/user/Downloads/Tugas Individu Anreg/Tugas Individu Analisis Regresi.xlsx")
+str(dt)
+```
+
+## Scatter Plot
+```{r}
+plot(x=dt$X, y=dt$Y)
+```
+
+## Uji Normalitas
+```{r}
+qqnorm(dt$Y)
+qqline(dt$Y, col="navy")
+shapiro.test(dt$Y)
+```
+
+### Intepretasi
+Hasil menunjukkan p-value = 0.08374. Karena p-value lebih dari 0.05, maka dapat disimpulkan bahwa data menyebar normal walaupun menurut qqplot data tidak menyebar normal.
+
+## Pemodelan Regresi Linear
+```{r}
+model<-lm(formula=Y~X, data=dt)
+summary(model)
+model
+```
+
+## Uji Autokorelasi
+```{r}
+acf(model$residuals)
+dwtest(model)
+```
+
+### Intepretasi
+Hasil menunjukkan bahwa autokorelasi pada lag 1 sekitar 0.6 dam lag 2 sekitar 0.4. Uji Durbin-Watson juga menunjukkan bahwa p-value = 1.333e-05 yang kurang dari 0.05. Nilai autokorelasi yang melebihi selang kepecrayaan menunjukkan bahwa dapat disimpulkan terdapat autokorelasi pada lag 1 dan 2 secara signifikan. Karena terdapat autokorelasi, maka tidak terpenuhinya asumsi Gauss-Makrov.
+
+## Uji Ragam Galat Homogen (Homoskedastisitas)
+```{r}
+plot(model, which = 1)
+```
+
+### Intepretasi
+Dapat dilihat bahwa ragam galat cenderung meningkat seiring dengan nilai prediksi. Hal ini menunjukkan bahwa terdapat homoskedastisitas
+
+## Transformasi Data
+```{r}
+residual<-abs(model$residuals)
+fitted<-model$fitted.values
+fit<-lm(residual~fitted, dt)
+data<-(1/(fit$fitted)^2)
+data
+```
+
+
+### Scatter Plot
+```{r}
+plot(data)
+model_data <- lm(Y~X, data = dt, weights = data)
+plot(model_data)
+summary(model_data)
+```
+
+### Intepretasi
+Dapat dilihat bahwa transformasi WLS masih belum efektif karena data masih belum memenuhi asumsi Gauss-Markov.
+
+## Transformasi Akar pada X dan Y
+```{r}
+dt_baru<-dt %>%
+  mutate(y=sqrt(Y)) %>%
+  mutate(x=sqrt(X))
+model_sqrt_x <- lm(y~X, data=dt_baru)
+plot(x=dt_baru$X, y=dt_baru$y)
+plot(model_sqrt_x)
+summary(model_sqrt_x)
+```
+
+## Uji Korelasi terhadap Model Regresi Transformasi
+```{r}
+dwtest(model_sqrt_x)
+model_sqrt <- lm(y ~ x, data = dt_baru)
+plot(x = dt_baru$x, y = dt_baru$y)
+plot(model_sqrt)
+summary(model_sqrt)
+```
+
+### Intepretasi
+Hasil test Durbin-Watson menunjukkan adanya autokorelasi positif karena nilai DW test yang rendah dan p-value yang kurang dari 0.05 sehingga signifikan. 
+
+## Uji Autokorelasi Model Regresi
+
+```{r}
+dwtest(model_sqrt)
+```
+
+## Kesimpulan
+Dapat disimpulkan bahwa nilai p-value yang besar dari 0.05 meunjukkan bahwa belum cukup bukti untuk tolak H0, maka tidak terdapat autokorelasi. Dari hasil transformasi diatas juga dapat disimpulkan bahwa transformasi akar Y dapat membuat pemodelan regresi linear lebih efektif. Model Regresi Linear setelah ditransformasi, yaitu:
+$$
+Y^*=8.71245 -0.81339X^* + e Y^* = \sqrt{Y}X^* = \sqrt{X}
+$$
+Interpretasi model menunjukkan bahwa Y berkorelasi terbalik dengan akar kuadrat dari X, dengan hubungan yang bersifat kuadratik. Semakin besar nilai akar kuadrat dari X, semakin kecil rata-rata nilai Y, dengan tingkat penurunan yang semakin meningkat. Puncak kurva menunjukkan nilai rata-rata maksimum Y untuk nilai tertentu dari X. Konstanta 8.71245 mewakili nilai Y ketika X sama dengan 0. Koefisien -0.81339 merupakan koefisien regresi untuk variabel X. Nilai negatif menunjukkan hubungan terbalik antara Y dan akar kuadrat dari X. Dengan kata lain, semakin besar akar kuadrat dari X, semakin kecil nilai Y. Pangkat dua pada koefisien regresi menunjukkan bahwa hubungan antara Y dan X bersifat kuadratik. Ini berarti perubahan Y tidak proporsional dengan perubahan X, melainkan berubah dengan tingkat peningkatan yang semakin tinggi.
